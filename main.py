@@ -5,6 +5,23 @@ from dotenv import load_dotenv
 from terminaltables import AsciiTable
 
 
+def predict_rub_salary(currency, payment_form=None, payment_to=None):
+    """Прогнозирует ожидаемую зарплату из вакансии."""
+    if currency != 'rub' and currency != 'RUR':
+        return None
+    
+    elif payment_form and payment_to:
+        expected_salary = (payment_form + payment_to) / 2
+
+    elif payment_form:
+        expected_salary = payment_form * 1.2
+
+    elif payment_to:
+        expected_salary = payment_to * 0.8
+
+    return expected_salary
+
+
 def get_vacancies_for_language_from_sj(language, secret_key, page=0):
     """Получение вакансий по указанному языку программирования."""
     url = 'https://api.superjob.ru/2.0/vacancies/'
@@ -29,23 +46,6 @@ def get_vacancies_for_language_from_sj(language, secret_key, page=0):
     return response.json()
 
 
-def predict_rub_salary_sj(vacancy):
-    """Прогнозирует ожидаемую зарплату из вакансии."""
-    if vacancy['currency'] != 'rub':
-        return None
-
-    elif vacancy['payment_from'] and vacancy['payment_to']:
-        expected_salary = (vacancy['payment_from'] + vacancy['payment_to']) / 2
-
-    elif vacancy['payment_from']:
-        expected_salary = vacancy['payment_from'] * 1.2
-
-    elif vacancy['payment_to']:
-        expected_salary = vacancy['payment_to'] * 0.8
-
-    return expected_salary
-
-
 def collect_salaries_by_language_form_sj(languages, secret_key):
     """Сбор информации с сайта 'SuperJob'."""
     languages_salaries = {}
@@ -67,7 +67,12 @@ def collect_salaries_by_language_form_sj(languages, secret_key):
             all_vacancies.extend(language_vacancies.get("objects", []))
 
             for vacancy in language_vacancies['objects']:
-                salary = predict_rub_salary_sj(vacancy)
+                currency = vacancy['currency']
+                payment_from = vacancy['payment_from']
+                payment_to = vacancy['payment_to']
+
+                salary = predict_rub_salary(currency, payment_from, payment_to)
+                
                 if salary:
                     all_salaries.append(salary)
 
@@ -110,23 +115,6 @@ def get_vacancies_for_language_from_hh(language, page=0):
     return response.json()
 
 
-def predict_rub_salary_hh(vacancy):
-    """Прогнозирует ожидаемую зарплату из вакансии."""
-    if vacancy['salary']['currency'] != 'RUR':
-        return None
-
-    elif vacancy['salary']['from'] and vacancy['salary']['to']:
-        expected_salary = (vacancy['salary']['from'] + vacancy['salary']['to']) / 2
-
-    elif vacancy['salary']['from']:
-        expected_salary = vacancy['salary']['from'] * 1.2
-
-    elif vacancy['salary']['to']:
-        expected_salary = vacancy['salary']['to'] * 0.8
-
-    return expected_salary
-
-
 def collect_salaries_by_language_from_hh(languages):
     """Сбор информации с сайта 'HeadHunter'."""
     languages_salaries = {}
@@ -139,7 +127,12 @@ def collect_salaries_by_language_from_hh(languages):
             response = get_vacancies_for_language_from_hh(language, page)
 
             for vacancy in response['items']:
-                salary = predict_rub_salary_hh(vacancy)
+                currency = vacancy['salary']['currency']
+                payment_from = vacancy['salary']['from']
+                payment_to = vacancy['salary']['to']
+
+                salary = predict_rub_salary(currency, payment_from, payment_to)
+
                 if salary:
                     all_salaries.append(salary)
             
@@ -148,7 +141,10 @@ def collect_salaries_by_language_from_hh(languages):
             page += 1
             time.sleep(0.5)
 
-        average_salary_for_language = int(sum(all_salaries) / len(all_salaries))
+        try:
+            average_salary_for_language = int(sum(all_salaries) / len(all_salaries))
+        except ZeroDivisionError:
+            average_salary_for_language = 0
 
         languages_salaries[language] = {
             'vacancies_found': vacancies_found,
