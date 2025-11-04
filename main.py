@@ -7,7 +7,10 @@ from terminaltables import AsciiTable
 
 def predict_rub_salary(currency, payment_form=None, payment_to=None):
     """Прогнозирует ожидаемую зарплату из вакансии."""
-    if currency != 'rub' and currency != 'RUR':
+    if not payment_form and not payment_to:
+        return None
+
+    elif currency != 'rub' and currency != 'RUR':
         return None
     
     elif payment_form and payment_to:
@@ -37,7 +40,6 @@ def get_vacancies_for_language_from_sj(language, secret_key, page=0):
         'town': town_index,
         'catalogues': professional_industry_index,
         'keyword': language,
-        'no_agreement': 1,
         'page': page,
         'count': count_per_page,
     }
@@ -72,7 +74,7 @@ def collect_salaries_by_language_form_sj(languages, secret_key):
                 payment_to = vacancy['payment_to']
 
                 salary = predict_rub_salary(currency, payment_from, payment_to)
-                
+                    
                 if salary:
                     all_salaries.append(salary)
 
@@ -108,7 +110,6 @@ def get_vacancies_for_language_from_hh(language, page=0):
         'area': town_index,
         'period': vacancy_publication_period,
         'text': language,
-        'only_with_salary': True,
     }
     response = requests.get(url, params=payload)
     response.raise_for_status()
@@ -127,14 +128,15 @@ def collect_salaries_by_language_from_hh(languages):
             response = get_vacancies_for_language_from_hh(language, page)
 
             for vacancy in response['items']:
-                currency = vacancy['salary']['currency']
-                payment_from = vacancy['salary']['from']
-                payment_to = vacancy['salary']['to']
+                if vacancy['salary']:
+                    currency = vacancy['salary']['currency']
+                    payment_from = vacancy['salary']['from']
+                    payment_to = vacancy['salary']['to']
 
-                salary = predict_rub_salary(currency, payment_from, payment_to)
+                    salary = predict_rub_salary(currency, payment_from, payment_to)
 
-                if salary:
-                    all_salaries.append(salary)
+                    if salary:
+                        all_salaries.append(salary)
             
             pages_number = response['pages']
             vacancies_found = response['found']
