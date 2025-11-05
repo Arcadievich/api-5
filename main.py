@@ -134,15 +134,6 @@ def collect_salaries_by_language_from_hh(languages):
                 salary = predict_rub_salary(currency, payment_from, payment_to)
                 if salary:
                     all_salaries.append(salary)
-                # if vacancy['salary']:
-                #     currency = vacancy['salary']['currency']
-                #     payment_from = vacancy['salary']['from']
-                #     payment_to = vacancy['salary']['to']
-
-                #     salary = predict_rub_salary(currency, payment_from, payment_to)
-
-                #     if salary:
-                #         all_salaries.append(salary)
             
             pages_number = response['pages']
             vacancies_found = response['found']
