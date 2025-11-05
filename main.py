@@ -5,19 +5,19 @@ from dotenv import load_dotenv
 from terminaltables import AsciiTable
 
 
-def predict_rub_salary(currency, payment_form=None, payment_to=None):
+def predict_rub_salary(currency, payment_from=None, payment_to=None):
     """Прогнозирует ожидаемую зарплату из вакансии."""
-    if not payment_form and not payment_to:
+    if not payment_from and not payment_to:
         return None
 
     elif currency != 'rub' and currency != 'RUR':
         return None
     
-    elif payment_form and payment_to:
-        expected_salary = (payment_form + payment_to) / 2
+    elif payment_from and payment_to:
+        expected_salary = (payment_from + payment_to) / 2
 
-    elif payment_form:
-        expected_salary = payment_form * 1.2
+    elif payment_from:
+        expected_salary = payment_from * 1.2
 
     elif payment_to:
         expected_salary = payment_to * 0.8
@@ -53,20 +53,15 @@ def collect_salaries_by_language_form_sj(languages, secret_key):
     languages_salaries = {}
 
     for language in languages:
-        
         all_salaries = []
-        all_vacancies = []
-        max_vacancies = 1
         page = 0
 
-        while len(all_vacancies) < max_vacancies:
+        while True:
             language_vacancies = get_vacancies_for_language_from_sj(
                 language,
                 secret_key,
                 page,
             )
-
-            all_vacancies.extend(language_vacancies.get("objects", []))
 
             for vacancy in language_vacancies['objects']:
                 currency = vacancy['currency']
@@ -78,7 +73,9 @@ def collect_salaries_by_language_form_sj(languages, secret_key):
                 if salary:
                     all_salaries.append(salary)
 
-            max_vacancies = language_vacancies['total']
+            if language_vacancies['more'] == False:
+                break
+
             page += 1
             time.sleep(0.5)
 
@@ -128,15 +125,24 @@ def collect_salaries_by_language_from_hh(languages):
             response = get_vacancies_for_language_from_hh(language, page)
 
             for vacancy in response['items']:
-                if vacancy['salary']:
-                    currency = vacancy['salary']['currency']
-                    payment_from = vacancy['salary']['from']
-                    payment_to = vacancy['salary']['to']
+                if not vacancy['salary']:
+                    continue
+                currency = vacancy['salary']['currency']
+                payment_from = vacancy['salary']['from']
+                payment_to = vacancy['salary']['to']
 
-                    salary = predict_rub_salary(currency, payment_from, payment_to)
+                salary = predict_rub_salary(currency, payment_from, payment_to)
+                if salary:
+                    all_salaries.append(salary)
+                # if vacancy['salary']:
+                #     currency = vacancy['salary']['currency']
+                #     payment_from = vacancy['salary']['from']
+                #     payment_to = vacancy['salary']['to']
 
-                    if salary:
-                        all_salaries.append(salary)
+                #     salary = predict_rub_salary(currency, payment_from, payment_to)
+
+                #     if salary:
+                #         all_salaries.append(salary)
             
             pages_number = response['pages']
             vacancies_found = response['found']
